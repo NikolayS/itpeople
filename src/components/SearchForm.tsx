@@ -23,6 +23,7 @@ interface Props {
 export function SearchForm({ onSearch, isLoading }: Props) {
   const [techSkills, setTechSkills] = useState<string[]>([])
   const [spokenLanguage, setSpokenLanguage] = useState('')
+  const [strictLanguageFilter, setStrictLanguageFilter] = useState(false)
   const [location, setLocation] = useState('')
   const [minStars, setMinStars] = useState('')
   const [minFollowers, setMinFollowers] = useState('')
@@ -33,6 +34,7 @@ export function SearchForm({ onSearch, isLoading }: Props) {
     onSearch({
       techSkills: techSkills.length > 0 ? techSkills : undefined,
       spokenLanguage: spokenLanguage || undefined,
+      strictLanguageFilter: spokenLanguage ? strictLanguageFilter : undefined,
       location: location || undefined,
       minStars: minStars ? parseInt(minStars) : undefined,
       minFollowers: minFollowers ? parseInt(minFollowers) : undefined,
@@ -87,6 +89,17 @@ export function SearchForm({ onSearch, isLoading }: Props) {
               <option key={lang} value={lang}>{lang}</option>
             ))}
           </select>
+          {spokenLanguage && (
+            <label className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={strictLanguageFilter}
+                onChange={e => setStrictLanguageFilter(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>Strict (confirmed match only)</span>
+            </label>
+          )}
         </div>
 
         <div>

@@ -29,6 +29,7 @@ export interface Candidate {
 export interface SearchFilters {
   techSkills?: string[]
   spokenLanguage?: string
+  strictLanguageFilter?: boolean  // If true, only show users with confirmed language match
   location?: string
   minStars?: number
   minFollowers?: number

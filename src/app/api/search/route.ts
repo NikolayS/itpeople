@@ -39,11 +39,22 @@ export async function POST(request: NextRequest) {
 
         console.log(`User ${user.login}: name="${enriched.user.name}", location="${enriched.user.location}", bio="${enriched.user.bio?.substring(0, 50)}...", detected=${detectedLanguage}`)
 
-        // Filter by spoken language if specified - but only if we could detect a language
-        // If we can't detect the language (null), include the user anyway
-        if (filters.spokenLanguage && detectedLanguage && detectedLanguage !== filters.spokenLanguage) {
-          console.log(`  Skipping: detected ${detectedLanguage}, wanted ${filters.spokenLanguage}`)
-          continue
+        // Filter by spoken language if specified
+        if (filters.spokenLanguage) {
+          if (filters.strictLanguageFilter) {
+            // Strict mode: only include users where we detected the exact language match
+            if (detectedLanguage !== filters.spokenLanguage) {
+              console.log(`  Skipping (strict): detected ${detectedLanguage}, wanted ${filters.spokenLanguage}`)
+              continue
+            }
+          } else {
+            // Non-strict mode: include users with matching language OR unknown language
+            // Only skip if we detected a DIFFERENT language
+            if (detectedLanguage && detectedLanguage !== filters.spokenLanguage) {
+              console.log(`  Skipping: detected ${detectedLanguage}, wanted ${filters.spokenLanguage}`)
+              continue
+            }
+          }
         }
 
         // Filter by tech skills if more than one specified
