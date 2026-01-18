@@ -30,6 +30,8 @@ export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChang
   const [minStars, setMinStars] = useState(initialFilters?.minStars?.toString() || '')
   const [minFollowers, setMinFollowers] = useState(initialFilters?.minFollowers?.toString() || '')
   const [recentActivityMonths, setRecentActivityMonths] = useState(initialFilters?.recentActivityMonths?.toString() || '')
+  const [enableStackOverflow, setEnableStackOverflow] = useState(initialFilters?.enableStackOverflow ?? false)
+  const [maxResults, setMaxResults] = useState(initialFilters?.maxResults?.toString() || '10')
 
   // Build current filters object
   const buildFilters = useCallback((): SearchFilters => ({
@@ -40,7 +42,9 @@ export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChang
     minStars: minStars ? parseInt(minStars) : undefined,
     minFollowers: minFollowers ? parseInt(minFollowers) : undefined,
     recentActivityMonths: recentActivityMonths ? parseInt(recentActivityMonths) : undefined,
-  }), [techSkills, spokenLanguage, strictLanguageFilter, location, minStars, minFollowers, recentActivityMonths])
+    enableStackOverflow: enableStackOverflow || undefined,
+    maxResults: maxResults ? parseInt(maxResults) : undefined,
+  }), [techSkills, spokenLanguage, strictLanguageFilter, location, minStars, minFollowers, recentActivityMonths, enableStackOverflow, maxResults])
 
   // Notify parent of filter changes
   useEffect(() => {
@@ -49,15 +53,7 @@ export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChang
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSearch({
-      techSkills: techSkills.length > 0 ? techSkills : undefined,
-      spokenLanguage: spokenLanguage || undefined,
-      strictLanguageFilter: spokenLanguage ? strictLanguageFilter : undefined,
-      location: location || undefined,
-      minStars: minStars ? parseInt(minStars) : undefined,
-      minFollowers: minFollowers ? parseInt(minFollowers) : undefined,
-      recentActivityMonths: recentActivityMonths ? parseInt(recentActivityMonths) : undefined,
-    })
+    onSearch(buildFilters())
   }
 
   const toggleSkill = (skill: string) => {
@@ -177,6 +173,37 @@ export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChang
             <option value="12">12 months</option>
           </select>
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Max Results
+          </label>
+          <select
+            value={maxResults}
+            onChange={e => setMaxResults(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="border-t pt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Integrations
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={enableStackOverflow}
+            onChange={e => setEnableStackOverflow(e.target.checked)}
+            className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+          />
+          <span>Stack Overflow lookup (slower, adds SO reputation)</span>
+        </label>
       </div>
 
       <button

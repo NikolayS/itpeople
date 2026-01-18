@@ -24,16 +24,19 @@ export async function POST(request: NextRequest) {
     }
 
     const query = queryParts.join(' ')
+    const maxResults = filters.maxResults || 10
 
-    // Search GitHub
-    const searchResult = await searchUsers(query, 1, 20)
+    // Search GitHub - fetch more than needed to account for filtering
+    const searchResult = await searchUsers(query, 1, Math.min(maxResults * 2, 100))
 
     // Enrich each user with detailed data
     const candidates: Candidate[] = []
 
     console.log(`GitHub search returned ${searchResult.items.length} users for query: ${query}`)
 
-    for (const user of searchResult.items.slice(0, 10)) {
+    for (const user of searchResult.items) {
+      // Stop if we have enough candidates
+      if (candidates.length >= maxResults) break
       try {
         const enriched = await enrichUserData(user.login)
         const detectedLanguage = detectSpokenLanguage(enriched.user.bio, enriched.user.location, enriched.user.name)
@@ -82,12 +85,14 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Try to enrich with Stack Overflow data
+        // Try to enrich with Stack Overflow data (if enabled)
         let soData: { stackoverflow_id: number | null; stackoverflow_reputation: number; soTechSkills: string[] } | null = null
-        try {
-          soData = await enrichWithSOData(enriched.user.login, enriched.user.name)
-        } catch (soError) {
-          console.warn(`SO enrichment failed for ${user.login}:`, soError)
+        if (filters.enableStackOverflow) {
+          try {
+            soData = await enrichWithSOData(enriched.user.login, enriched.user.name)
+          } catch (soError) {
+            console.warn(`SO enrichment failed for ${user.login}:`, soError)
+          }
         }
 
         // Merge tech skills from GitHub and SO

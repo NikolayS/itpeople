@@ -34,6 +34,10 @@ export interface SearchFilters {
   minStars?: number
   minFollowers?: number
   recentActivityMonths?: number
+  // Integration controls
+  enableStackOverflow?: boolean  // Enable SO profile lookup (slower)
+  // Result limit
+  maxResults?: number  // How many results to return (10, 50, 100)
 }
 
 export interface SavedSearch {

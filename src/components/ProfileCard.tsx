@@ -100,6 +100,11 @@ export function ProfileCard({ candidate, rank }: Props) {
             <span className="text-gray-600">
               <strong>{candidate.public_repos}</strong> repos
             </span>
+            {candidate.stackoverflow_reputation > 0 && (
+              <span className="text-orange-600">
+                <strong>{candidate.stackoverflow_reputation.toLocaleString()}</strong> SO rep
+              </span>
+            )}
           </div>
         </div>
 
@@ -115,6 +120,20 @@ export function ProfileCard({ candidate, rank }: Props) {
               <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
             </svg>
           </a>
+
+          {candidate.stackoverflow_id && (
+            <a
+              href={`https://stackoverflow.com/users/${candidate.stackoverflow_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-gray-600 hover:text-orange-500 hover:bg-gray-100 rounded transition-colors"
+              title="Stack Overflow"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M15.725 0l-1.72 1.277 6.39 8.588 1.716-1.277L15.725 0zm-3.94 3.418l-1.369 1.644 8.225 6.85 1.369-1.644-8.225-6.85zm-3.15 4.465l-.905 1.94 9.702 4.517.904-1.94-9.701-4.517zm-1.85 4.86l-.44 2.093 10.473 2.201.44-2.092-10.473-2.203zM1.89 15.47V24h19.19v-8.53h-2.133v6.397H4.021v-6.396H1.89zm4.265 2.133v2.13h10.66v-2.13H6.154z" />
+              </svg>
+            </a>
+          )}
 
           {candidate.twitter_username && (
             <a
