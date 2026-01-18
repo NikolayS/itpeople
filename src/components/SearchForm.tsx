@@ -31,6 +31,7 @@ export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChang
   const [minFollowers, setMinFollowers] = useState(initialFilters?.minFollowers?.toString() || '')
   const [recentActivityMonths, setRecentActivityMonths] = useState(initialFilters?.recentActivityMonths?.toString() || '')
   const [enableStackOverflow, setEnableStackOverflow] = useState(initialFilters?.enableStackOverflow ?? false)
+  const [enableLinkedIn, setEnableLinkedIn] = useState(initialFilters?.enableLinkedIn ?? false)
   const [maxResults, setMaxResults] = useState(initialFilters?.maxResults?.toString() || '10')
 
   // Build current filters object
@@ -43,8 +44,9 @@ export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChang
     minFollowers: minFollowers ? parseInt(minFollowers) : undefined,
     recentActivityMonths: recentActivityMonths ? parseInt(recentActivityMonths) : undefined,
     enableStackOverflow: enableStackOverflow || undefined,
+    enableLinkedIn: enableLinkedIn || undefined,
     maxResults: maxResults ? parseInt(maxResults) : undefined,
-  }), [techSkills, spokenLanguage, strictLanguageFilter, location, minStars, minFollowers, recentActivityMonths, enableStackOverflow, maxResults])
+  }), [techSkills, spokenLanguage, strictLanguageFilter, location, minStars, minFollowers, recentActivityMonths, enableStackOverflow, enableLinkedIn, maxResults])
 
   // Notify parent of filter changes
   useEffect(() => {
@@ -203,6 +205,15 @@ export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChang
             className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
           />
           <span>Stack Overflow lookup (slower, adds SO reputation)</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+          <input
+            type="checkbox"
+            checked={enableLinkedIn}
+            onChange={e => setEnableLinkedIn(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span>LinkedIn lookup (slowest, uses Claude browser automation)</span>
         </label>
       </div>
 

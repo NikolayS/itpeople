@@ -36,6 +36,7 @@ export interface SearchFilters {
   recentActivityMonths?: number
   // Integration controls
   enableStackOverflow?: boolean  // Enable SO profile lookup (slower)
+  enableLinkedIn?: boolean  // Enable LinkedIn lookup via Claude (slowest)
   // Result limit
   maxResults?: number  // How many results to return (10, 50, 100)
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchUsers, enrichUserData, detectSpokenLanguage } from '@/lib/github'
 import { enrichWithSOData } from '@/lib/stackoverflow'
+import { enrichWithLinkedIn } from '@/lib/linkedin'
 import { calculateScore } from '@/lib/scoring'
 import { supabase } from '@/lib/supabase'
 import type { Candidate, SearchFilters } from '@/types/candidate'
@@ -95,10 +96,36 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Merge tech skills from GitHub and SO
+        // Try to enrich with LinkedIn data (if enabled)
+        let linkedInData: { linkedin_url: string | null; linkedinLanguages: string[]; linkedinSkills: string[] } | null = null
+        if (filters.enableLinkedIn) {
+          try {
+            linkedInData = await enrichWithLinkedIn(
+              enriched.user.name,
+              enriched.user.location,
+              enriched.user.company
+            )
+            // If LinkedIn found languages, update detected language
+            if (linkedInData?.linkedinLanguages?.length > 0) {
+              // LinkedIn languages are more reliable
+              console.log(`  LinkedIn languages for ${user.login}:`, linkedInData.linkedinLanguages)
+            }
+          } catch (liError) {
+            console.warn(`LinkedIn enrichment failed for ${user.login}:`, liError)
+          }
+        }
+
+        // Merge tech skills from GitHub, SO, and LinkedIn
         const allTechSkills = [...enriched.techSkills]
         if (soData?.soTechSkills) {
           for (const skill of soData.soTechSkills) {
+            if (!allTechSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
+              allTechSkills.push(skill)
+            }
+          }
+        }
+        if (linkedInData?.linkedinSkills) {
+          for (const skill of linkedInData.linkedinSkills) {
             if (!allTechSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
               allTechSkills.push(skill)
             }
@@ -125,6 +152,7 @@ export async function POST(request: NextRequest) {
           last_activity_at: lastActivity,
           stackoverflow_id: soData?.stackoverflow_id ?? null,
           stackoverflow_reputation: soData?.stackoverflow_reputation ?? 0,
+          linkedin_url: linkedInData?.linkedin_url ?? null,
         }
 
         const score = calculateScore(candidateData)
@@ -133,7 +161,6 @@ export async function POST(request: NextRequest) {
           id: '',
           ...candidateData,
           total_commits: 0,
-          linkedin_url: null,
           score,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
