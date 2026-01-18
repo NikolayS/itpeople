@@ -1,4 +1,5 @@
 import type { GitHubUser, GitHubRepo, GitHubSearchResult } from '@/types/candidate'
+import { getCached, setCache, cacheKey } from './cache'
 
 const GITHUB_API_BASE = 'https://api.github.com'
 
@@ -73,12 +74,21 @@ export function buildSearchQuery(filters: {
   return parts.join(' ')
 }
 
-export async function enrichUserData(username: string): Promise<{
+interface EnrichedUserData {
   user: GitHubUser
   repos: GitHubRepo[]
   techSkills: string[]
   totalStars: number
-}> {
+}
+
+export async function enrichUserData(username: string): Promise<EnrichedUserData> {
+  // Check cache first
+  const key = cacheKey('github-user', username)
+  const cached = await getCached<EnrichedUserData>(key)
+  if (cached) {
+    return cached
+  }
+
   const [user, repos] = await Promise.all([
     getUser(username),
     getUserRepos(username),
@@ -105,7 +115,12 @@ export async function enrichUserData(username: string): Promise<{
   // Calculate total stars
   const totalStars = repos.reduce((sum, repo) => sum + repo.stargazers_count, 0)
 
-  return { user, repos, techSkills, totalStars }
+  const result = { user, repos, techSkills, totalStars }
+
+  // Cache the result
+  await setCache(key, result)
+
+  return result
 }
 
 export function detectSpokenLanguage(bio: string | null, location?: string | null, name?: string | null): string | null {

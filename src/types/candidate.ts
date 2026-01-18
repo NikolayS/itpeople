@@ -89,3 +89,34 @@ export interface GitHubSearchResult {
   incomplete_results: boolean
   items: GitHubUser[]
 }
+
+// Stack Overflow types
+export interface SOUser {
+  user_id: number
+  display_name: string
+  profile_image: string
+  link: string
+  reputation: number
+  location: string | null
+  website_url: string | null
+  creation_date: number
+  last_access_date: number
+  answer_count: number
+  question_count: number
+  accept_rate?: number
+}
+
+export interface SOUserSearchResult {
+  items: SOUser[]
+  has_more: boolean
+  quota_max: number
+  quota_remaining: number
+}
+
+export interface SOTopTag {
+  tag_name: string
+  answer_count: number
+  answer_score: number
+  question_count: number
+  question_score: number
+}

@@ -43,6 +43,16 @@ CREATE TABLE search_history (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Cache table for API results
+CREATE TABLE cache (
+  key TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX idx_cache_expires ON cache(expires_at);
+
 -- Index for faster searches
 CREATE INDEX idx_candidates_location ON candidates(location);
 CREATE INDEX idx_candidates_tech_skills ON candidates USING GIN(tech_skills);
@@ -65,3 +75,9 @@ CREATE POLICY "Allow public delete" ON saved_searches FOR DELETE USING (true);
 
 CREATE POLICY "Allow public read" ON search_history FOR SELECT USING (true);
 CREATE POLICY "Allow public insert" ON search_history FOR INSERT WITH CHECK (true);
+
+ALTER TABLE cache ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read" ON cache FOR SELECT USING (true);
+CREATE POLICY "Allow public insert" ON cache FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update" ON cache FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete" ON cache FOR DELETE USING (true);

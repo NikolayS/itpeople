@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchUsers, enrichUserData, detectSpokenLanguage } from '@/lib/github'
+import { enrichWithSOData } from '@/lib/stackoverflow'
 import { calculateScore } from '@/lib/scoring'
 import { supabase } from '@/lib/supabase'
 import type { Candidate, SearchFilters } from '@/types/candidate'
@@ -81,6 +82,24 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // Try to enrich with Stack Overflow data
+        let soData: { stackoverflow_id: number | null; stackoverflow_reputation: number; soTechSkills: string[] } | null = null
+        try {
+          soData = await enrichWithSOData(enriched.user.login, enriched.user.name)
+        } catch (soError) {
+          console.warn(`SO enrichment failed for ${user.login}:`, soError)
+        }
+
+        // Merge tech skills from GitHub and SO
+        const allTechSkills = [...enriched.techSkills]
+        if (soData?.soTechSkills) {
+          for (const skill of soData.soTechSkills) {
+            if (!allTechSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
+              allTechSkills.push(skill)
+            }
+          }
+        }
+
         const candidateData: Partial<Candidate> = {
           github_username: enriched.user.login,
           github_id: enriched.user.id,
@@ -96,9 +115,11 @@ export async function POST(request: NextRequest) {
           followers: enriched.user.followers,
           following: enriched.user.following,
           total_stars: enriched.totalStars,
-          tech_skills: enriched.techSkills,
+          tech_skills: allTechSkills.slice(0, 15),
           detected_spoken_language: detectedLanguage,
           last_activity_at: lastActivity,
+          stackoverflow_id: soData?.stackoverflow_id ?? null,
+          stackoverflow_reputation: soData?.stackoverflow_reputation ?? 0,
         }
 
         const score = calculateScore(candidateData)
@@ -107,8 +128,6 @@ export async function POST(request: NextRequest) {
           id: '',
           ...candidateData,
           total_commits: 0,
-          stackoverflow_id: null,
-          stackoverflow_reputation: 0,
           linkedin_url: null,
           score,
           created_at: new Date().toISOString(),

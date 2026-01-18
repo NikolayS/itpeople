@@ -101,7 +101,7 @@ Composite score based on:
 
 ### Phase 0.5: API Keys Setup (via browser automation)
 - [x] Create Supabase project, get URL and anon key
-- [ ] Get Stack Overflow API key (skipped for MVP)
+- [x] Get Stack Overflow API key (optional - using unauthenticated API)
 - [x] Add keys to ~/.zshrc
 
 ### Phase 1: Project Setup
@@ -119,10 +119,10 @@ Composite score based on:
 - [x] Parse bio for spoken language hints
 
 ### Phase 3: Stack Overflow Integration
-- [ ] Create SO API client
-- [ ] Search users by tags (tech skills)
-- [ ] Fetch reputation and top answers
-- [ ] Cross-reference with GitHub (by username/email)
+- [x] Create SO API client
+- [x] Search users by tags (tech skills)
+- [x] Fetch reputation and top answers
+- [x] Cross-reference with GitHub (by username/email)
 
 ### Phase 4: Search UI
 - [x] Build search form with filters
@@ -139,7 +139,7 @@ Composite score based on:
 ### Phase 6: Polish
 - [x] Save search feature
 - [x] Search history (saved to Supabase)
-- [ ] Caching layer for API results
+- [x] Caching layer for API results
 - [x] Loading states and error handling
 
 ## Files to Create
