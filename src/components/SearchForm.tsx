@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { SearchFilters } from '@/types/candidate'
 
 const TECH_SKILLS = [
@@ -18,16 +18,44 @@ const SPOKEN_LANGUAGES = [
 interface Props {
   onSearch: (filters: SearchFilters) => void
   isLoading: boolean
+  initialFilters?: SearchFilters
+  onFiltersChange?: (filters: SearchFilters) => void
 }
 
-export function SearchForm({ onSearch, isLoading }: Props) {
-  const [techSkills, setTechSkills] = useState<string[]>([])
-  const [spokenLanguage, setSpokenLanguage] = useState('')
-  const [strictLanguageFilter, setStrictLanguageFilter] = useState(false)
-  const [location, setLocation] = useState('')
-  const [minStars, setMinStars] = useState('')
-  const [minFollowers, setMinFollowers] = useState('')
-  const [recentActivityMonths, setRecentActivityMonths] = useState('')
+export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChange }: Props) {
+  const [techSkills, setTechSkills] = useState<string[]>(initialFilters?.techSkills || [])
+  const [spokenLanguage, setSpokenLanguage] = useState(initialFilters?.spokenLanguage || '')
+  const [strictLanguageFilter, setStrictLanguageFilter] = useState(initialFilters?.strictLanguageFilter || false)
+  const [location, setLocation] = useState(initialFilters?.location || '')
+  const [minStars, setMinStars] = useState(initialFilters?.minStars?.toString() || '')
+  const [minFollowers, setMinFollowers] = useState(initialFilters?.minFollowers?.toString() || '')
+  const [recentActivityMonths, setRecentActivityMonths] = useState(initialFilters?.recentActivityMonths?.toString() || '')
+
+  // Update form when initialFilters change (e.g., loading a saved search)
+  useEffect(() => {
+    if (initialFilters) {
+      setTechSkills(initialFilters.techSkills || [])
+      setSpokenLanguage(initialFilters.spokenLanguage || '')
+      setStrictLanguageFilter(initialFilters.strictLanguageFilter || false)
+      setLocation(initialFilters.location || '')
+      setMinStars(initialFilters.minStars?.toString() || '')
+      setMinFollowers(initialFilters.minFollowers?.toString() || '')
+      setRecentActivityMonths(initialFilters.recentActivityMonths?.toString() || '')
+    }
+  }, [initialFilters])
+
+  // Notify parent of filter changes
+  useEffect(() => {
+    onFiltersChange?.({
+      techSkills: techSkills.length > 0 ? techSkills : undefined,
+      spokenLanguage: spokenLanguage || undefined,
+      strictLanguageFilter: spokenLanguage ? strictLanguageFilter : undefined,
+      location: location || undefined,
+      minStars: minStars ? parseInt(minStars) : undefined,
+      minFollowers: minFollowers ? parseInt(minFollowers) : undefined,
+      recentActivityMonths: recentActivityMonths ? parseInt(recentActivityMonths) : undefined,
+    })
+  }, [techSkills, spokenLanguage, strictLanguageFilter, location, minStars, minFollowers, recentActivityMonths, onFiltersChange])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

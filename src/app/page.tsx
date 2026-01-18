@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { SearchForm } from '@/components/SearchForm'
 import { ResultsTable } from '@/components/ResultsTable'
+import { SavedSearches } from '@/components/SavedSearches'
 import type { Candidate, SearchFilters } from '@/types/candidate'
 
 export default function Home() {
@@ -10,6 +11,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loadedFilters, setLoadedFilters] = useState<SearchFilters | undefined>()
+  const [currentFilters, setCurrentFilters] = useState<SearchFilters>({})
 
   const handleSearch = async (filters: SearchFilters) => {
     setIsLoading(true)
@@ -51,7 +54,16 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
-            <SearchForm onSearch={handleSearch} isLoading={isLoading} />
+            <SearchForm
+              onSearch={handleSearch}
+              isLoading={isLoading}
+              initialFilters={loadedFilters}
+              onFiltersChange={setCurrentFilters}
+            />
+            <SavedSearches
+              currentFilters={currentFilters}
+              onLoadSearch={setLoadedFilters}
+            />
           </div>
 
           <div className="lg:col-span-2">

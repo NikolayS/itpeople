@@ -41,7 +41,7 @@ jobs:
         run: bun install
 
       - name: Run unit tests
-        run: bun test
+        run: bun run test
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 

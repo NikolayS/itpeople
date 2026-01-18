@@ -137,7 +137,7 @@ Composite score based on:
 - [x] Unified profile card display
 
 ### Phase 6: Polish
-- [ ] Save search feature
+- [x] Save search feature
 - [x] Search history (saved to Supabase)
 - [ ] Caching layer for API results
 - [x] Loading states and error handling
