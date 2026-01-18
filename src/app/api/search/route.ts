@@ -30,13 +30,19 @@ export async function POST(request: NextRequest) {
     // Enrich each user with detailed data
     const candidates: Candidate[] = []
 
+    console.log(`GitHub search returned ${searchResult.items.length} users for query: ${query}`)
+
     for (const user of searchResult.items.slice(0, 10)) {
       try {
         const enriched = await enrichUserData(user.login)
-        const detectedLanguage = detectSpokenLanguage(enriched.user.bio)
+        const detectedLanguage = detectSpokenLanguage(enriched.user.bio, enriched.user.location, enriched.user.name)
 
-        // Filter by spoken language if specified
-        if (filters.spokenLanguage && detectedLanguage !== filters.spokenLanguage) {
+        console.log(`User ${user.login}: name="${enriched.user.name}", location="${enriched.user.location}", bio="${enriched.user.bio?.substring(0, 50)}...", detected=${detectedLanguage}`)
+
+        // Filter by spoken language if specified - but only if we could detect a language
+        // If we can't detect the language (null), include the user anyway
+        if (filters.spokenLanguage && detectedLanguage && detectedLanguage !== filters.spokenLanguage) {
+          console.log(`  Skipping: detected ${detectedLanguage}, wanted ${filters.spokenLanguage}`)
           continue
         }
 
@@ -98,7 +104,39 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         } as Candidate)
       } catch (error) {
-        console.error(`Error enriching user ${user.login}:`, error)
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error(`Error enriching user ${user.login}: ${errorMessage}`)
+        // If rate limited, include a partial candidate with basic info
+        if (errorMessage.includes('403') || errorMessage.includes('rate limit')) {
+          console.warn('Rate limited - including basic user info without enrichment')
+          candidates.push({
+            id: '',
+            github_username: user.login,
+            github_id: user.id,
+            name: null,
+            bio: null,
+            location: null,
+            company: null,
+            email: null,
+            blog: null,
+            twitter_username: null,
+            avatar_url: user.avatar_url,
+            public_repos: 0,
+            followers: 0,
+            following: 0,
+            total_stars: 0,
+            tech_skills: [],
+            detected_spoken_language: null,
+            last_activity_at: null,
+            total_commits: 0,
+            stackoverflow_id: null,
+            stackoverflow_reputation: 0,
+            linkedin_url: null,
+            score: 10, // Minimal score for unenriched candidates
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as Candidate)
+        }
       }
     }
 
