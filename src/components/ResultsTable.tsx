@@ -1,7 +1,10 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import type { Candidate } from '@/types/candidate'
 import { ProfileCard } from './ProfileCard'
+
+const ITEMS_PER_PAGE = 10
 
 interface Props {
   candidates: Candidate[]
@@ -9,6 +12,13 @@ interface Props {
 }
 
 export function ResultsTable({ candidates, isLoading }: Props) {
+  const [currentPage, setCurrentPage] = useState(1)
+
+  // Reset to first page when candidates change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [candidates])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -57,11 +67,21 @@ export function ResultsTable({ candidates, isLoading }: Props) {
     URL.revokeObjectURL(url)
   }
 
+  const totalPages = Math.ceil(candidates.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const paginatedCandidates = candidates.slice(startIndex, endIndex)
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)))
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-gray-600">
           Found {candidates.length} candidates
+          {totalPages > 1 && ` (showing ${startIndex + 1}-${Math.min(endIndex, candidates.length)})`}
         </p>
         <button
           onClick={exportToCSV}
@@ -72,10 +92,46 @@ export function ResultsTable({ candidates, isLoading }: Props) {
       </div>
 
       <div className="grid gap-4">
-        {candidates.map((candidate, index) => (
-          <ProfileCard key={candidate.github_username || index} candidate={candidate} rank={index + 1} />
+        {paginatedCandidates.map((candidate, index) => (
+          <ProfileCard key={candidate.github_username || index} candidate={candidate} rank={startIndex + index + 1} />
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 pt-4">
+          <button
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Previous
+          </button>
+
+          <div className="flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => goToPage(page)}
+                className={`px-3 py-1 rounded text-sm ${
+                  page === currentPage
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   )
 }
