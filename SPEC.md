@@ -97,26 +97,26 @@ Composite score based on:
 
 ### Phase 0: Documentation
 - [x] Create SPEC.md in project root with full specification
-- [ ] Push to repo for review
+- [x] Push to repo for review
 
 ### Phase 0.5: API Keys Setup (via browser automation)
-- [ ] Create Supabase project, get URL and anon key
-- [ ] Get Stack Overflow API key
-- [ ] Add keys to ~/.zshrc
+- [x] Create Supabase project, get URL and anon key
+- [ ] Get Stack Overflow API key (skipped for MVP)
+- [x] Add keys to ~/.zshrc
 
 ### Phase 1: Project Setup
-- [ ] Initialize Next.js project with Bun
-- [ ] Set up Tailwind CSS
-- [ ] Configure Supabase connection
-- [ ] Create database schema
-- [ ] Set up environment variables for API keys
+- [x] Initialize Next.js project with Bun
+- [x] Set up Tailwind CSS
+- [x] Configure Supabase connection
+- [x] Create database schema
+- [x] Set up environment variables for API keys
 
 ### Phase 2: GitHub Integration
-- [ ] Create GitHub API client
-- [ ] Implement user search by location + language
-- [ ] Fetch repos and contribution stats
-- [ ] Detect programming languages from repos
-- [ ] Parse bio for spoken language hints
+- [x] Create GitHub API client
+- [x] Implement user search by location + language
+- [x] Fetch repos and contribution stats
+- [x] Detect programming languages from repos
+- [x] Parse bio for spoken language hints
 
 ### Phase 3: Stack Overflow Integration
 - [ ] Create SO API client
@@ -125,22 +125,22 @@ Composite score based on:
 - [ ] Cross-reference with GitHub (by username/email)
 
 ### Phase 4: Search UI
-- [ ] Build search form with filters
-- [ ] Create results table component
-- [ ] Implement scoring display
+- [x] Build search form with filters
+- [x] Create results table component
+- [x] Implement scoring display
 - [ ] Add pagination
-- [ ] Add export functionality
+- [x] Add export functionality
 
 ### Phase 5: Profile Enrichment
-- [ ] LinkedIn URL discovery (from GitHub bio/website)
-- [ ] Twitter handle extraction
-- [ ] Unified profile card display
+- [x] LinkedIn URL discovery (from GitHub bio/website)
+- [x] Twitter handle extraction
+- [x] Unified profile card display
 
 ### Phase 6: Polish
 - [ ] Save search feature
-- [ ] Search history
+- [x] Search history (saved to Supabase)
 - [ ] Caching layer for API results
-- [ ] Loading states and error handling
+- [x] Loading states and error handling
 
 ## Files to Create
 
