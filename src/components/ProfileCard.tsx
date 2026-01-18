@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import type { Candidate } from '@/types/candidate'
 
 interface Props {
@@ -17,10 +18,13 @@ export function ProfileCard({ candidate, rank }: Props) {
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0">
           <div className="relative">
-            <img
+            <Image
               src={candidate.avatar_url || '/placeholder-avatar.png'}
               alt={candidate.name || candidate.github_username || 'User'}
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-full"
+              unoptimized
             />
             <div className="absolute -top-2 -left-2 w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
               {rank}

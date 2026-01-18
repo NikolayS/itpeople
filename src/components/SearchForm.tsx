@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { SearchFilters } from '@/types/candidate'
 
 const TECH_SKILLS = [
@@ -31,31 +31,21 @@ export function SearchForm({ onSearch, isLoading, initialFilters, onFiltersChang
   const [minFollowers, setMinFollowers] = useState(initialFilters?.minFollowers?.toString() || '')
   const [recentActivityMonths, setRecentActivityMonths] = useState(initialFilters?.recentActivityMonths?.toString() || '')
 
-  // Update form when initialFilters change (e.g., loading a saved search)
-  useEffect(() => {
-    if (initialFilters) {
-      setTechSkills(initialFilters.techSkills || [])
-      setSpokenLanguage(initialFilters.spokenLanguage || '')
-      setStrictLanguageFilter(initialFilters.strictLanguageFilter || false)
-      setLocation(initialFilters.location || '')
-      setMinStars(initialFilters.minStars?.toString() || '')
-      setMinFollowers(initialFilters.minFollowers?.toString() || '')
-      setRecentActivityMonths(initialFilters.recentActivityMonths?.toString() || '')
-    }
-  }, [initialFilters])
+  // Build current filters object
+  const buildFilters = useCallback((): SearchFilters => ({
+    techSkills: techSkills.length > 0 ? techSkills : undefined,
+    spokenLanguage: spokenLanguage || undefined,
+    strictLanguageFilter: spokenLanguage ? strictLanguageFilter : undefined,
+    location: location || undefined,
+    minStars: minStars ? parseInt(minStars) : undefined,
+    minFollowers: minFollowers ? parseInt(minFollowers) : undefined,
+    recentActivityMonths: recentActivityMonths ? parseInt(recentActivityMonths) : undefined,
+  }), [techSkills, spokenLanguage, strictLanguageFilter, location, minStars, minFollowers, recentActivityMonths])
 
   // Notify parent of filter changes
   useEffect(() => {
-    onFiltersChange?.({
-      techSkills: techSkills.length > 0 ? techSkills : undefined,
-      spokenLanguage: spokenLanguage || undefined,
-      strictLanguageFilter: spokenLanguage ? strictLanguageFilter : undefined,
-      location: location || undefined,
-      minStars: minStars ? parseInt(minStars) : undefined,
-      minFollowers: minFollowers ? parseInt(minFollowers) : undefined,
-      recentActivityMonths: recentActivityMonths ? parseInt(recentActivityMonths) : undefined,
-    })
-  }, [techSkills, spokenLanguage, strictLanguageFilter, location, minStars, minFollowers, recentActivityMonths, onFiltersChange])
+    onFiltersChange?.(buildFilters())
+  }, [buildFilters, onFiltersChange])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

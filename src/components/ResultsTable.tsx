@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { Candidate } from '@/types/candidate'
 import { ProfileCard } from './ProfileCard'
 
@@ -14,10 +14,9 @@ interface Props {
 export function ResultsTable({ candidates, isLoading }: Props) {
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Reset to first page when candidates change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [candidates])
+  // Ensure current page is valid for the current candidates
+  const totalPages = Math.max(1, Math.ceil(candidates.length / ITEMS_PER_PAGE))
+  const validatedPage = Math.min(currentPage, totalPages)
 
   if (isLoading) {
     return (
@@ -67,8 +66,7 @@ export function ResultsTable({ candidates, isLoading }: Props) {
     URL.revokeObjectURL(url)
   }
 
-  const totalPages = Math.ceil(candidates.length / ITEMS_PER_PAGE)
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const startIndex = (validatedPage - 1) * ITEMS_PER_PAGE
   const endIndex = startIndex + ITEMS_PER_PAGE
   const paginatedCandidates = candidates.slice(startIndex, endIndex)
 
@@ -100,8 +98,8 @@ export function ResultsTable({ candidates, isLoading }: Props) {
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 pt-4">
           <button
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
+            onClick={() => goToPage(validatedPage - 1)}
+            disabled={validatedPage === 1}
             className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
           >
             Previous
@@ -113,7 +111,7 @@ export function ResultsTable({ candidates, isLoading }: Props) {
                 key={page}
                 onClick={() => goToPage(page)}
                 className={`px-3 py-1 rounded text-sm ${
-                  page === currentPage
+                  page === validatedPage
                     ? 'bg-blue-600 text-white'
                     : 'border border-gray-300 hover:bg-gray-50'
                 }`}
@@ -124,8 +122,8 @@ export function ResultsTable({ candidates, isLoading }: Props) {
           </div>
 
           <button
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
+            onClick={() => goToPage(validatedPage + 1)}
+            disabled={validatedPage === totalPages}
             className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
           >
             Next

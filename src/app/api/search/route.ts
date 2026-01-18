@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchUsers, enrichUserData, detectSpokenLanguage, buildSearchQuery } from '@/lib/github'
+import { searchUsers, enrichUserData, detectSpokenLanguage } from '@/lib/github'
 import { calculateScore } from '@/lib/scoring'
 import { supabase } from '@/lib/supabase'
 import type { Candidate, SearchFilters } from '@/types/candidate'

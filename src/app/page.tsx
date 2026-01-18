@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { SearchForm } from '@/components/SearchForm'
 import { ResultsTable } from '@/components/ResultsTable'
 import { SavedSearches } from '@/components/SavedSearches'
@@ -13,6 +13,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const [loadedFilters, setLoadedFilters] = useState<SearchFilters | undefined>()
   const [currentFilters, setCurrentFilters] = useState<SearchFilters>({})
+
+  // Key to reset SearchForm when loading saved search
+  const formKey = useMemo(() => JSON.stringify(loadedFilters || {}), [loadedFilters])
 
   const handleSearch = async (filters: SearchFilters) => {
     setIsLoading(true)
@@ -55,6 +58,7 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
             <SearchForm
+              key={formKey}
               onSearch={handleSearch}
               isLoading={isLoading}
               initialFilters={loadedFilters}
