@@ -174,15 +174,48 @@ export function detectSpokenLanguage(bio: string | null, location?: string | nul
 
   // Check Russian surname patterns (indirect detection)
   // Common Russian/Ukrainian/Belarusian surname endings
+  // Only check the LAST word (likely surname) to avoid matching common Western first names
   if (nameText) {
-    const nameParts = nameText.split(/\s+/)
-    for (const part of nameParts) {
-      const lowerPart = part.toLowerCase()
-      // Russian surname endings: -ov, -ev, -in, -yn, -sky, -skiy, -ski, -enko, -ko, -uk, -yuk, -chuk, -ovich, -evich
-      if (/(?:ov|ev|ova|eva|in|yn|ina|yna|sky|skiy|ski|skaya|enko|ko|uk|yuk|chuk|ovich|evich|ich|ych)$/i.test(lowerPart)) {
-        // Exclude common non-Russian names that might match
-        const excludeNames = ['markov', 'ivanov'] // these are too common, could be anyone
-        if (lowerPart.length > 4 && !excludeNames.includes(lowerPart)) {
+    const nameParts = nameText.split(/\s+/).filter(p => p.length > 0)
+
+    // Common Western first names that end in patterns that look Russian but aren't
+    const westernFirstNames = new Set([
+      'martin', 'katrina', 'katrin', 'justin', 'dustin', 'kristin', 'kristina',
+      'augustin', 'constantine', 'colin', 'kevin', 'gavin', 'marvin', 'alvin',
+      'calvin', 'melvin', 'irvin', 'darwin', 'edwin', 'kelvin', 'corwin',
+      'robin', 'franklin', 'merlin', 'berlin', 'quinn', 'finn', 'lin',
+      'marina', 'nina', 'tina', 'christina', 'sabrina', 'carolina', 'valentina',
+      'regina', 'georgina', 'wilhelmina', 'thomasina', 'angelina', 'seraphina',
+      'eva', 'ava', 'nova', 'silva', 'olivia', 'geneva',
+    ])
+
+    // Only check surname (last part) for Russian patterns
+    if (nameParts.length >= 2) {
+      const surname = nameParts[nameParts.length - 1].toLowerCase()
+
+      // Strong Russian surname patterns - more specific
+      // -ov/-ova, -ev/-eva (but not just 'ov' or 'ev')
+      // -sky/-skiy/-ski/-skaya (Slavic)
+      // -enko (Ukrainian)
+      // -uk/-yuk/-chuk (Ukrainian)
+      // -ovich/-evich/-ich/-ych (patronymic endings)
+      const strongRussianPattern = /(?:ov|ev|ova|eva)$|(?:sky|skiy|ski|skaya|skaia)$|(?:enko)$|(?:uk|yuk|chuk)$|(?:ovich|evich|ich|ych)$/i
+
+      if (strongRussianPattern.test(surname) && surname.length > 4) {
+        // Additional check: surname shouldn't be in exclude list
+        const excludeSurnames = ['laszkov', 'nemkov'] // add specific false positives here
+        if (!excludeSurnames.includes(surname)) {
+          return 'Russian'
+        }
+      }
+    }
+
+    // For single-word names, be more conservative - only match very distinctive patterns
+    if (nameParts.length === 1) {
+      const name = nameParts[0].toLowerCase()
+      if (!westernFirstNames.has(name)) {
+        // Only match clearly Slavic patterns like -enko, -ovich, -sky
+        if (/(?:enko|ovich|evich|sky|skiy|ski)$/i.test(name) && name.length > 5) {
           return 'Russian'
         }
       }
