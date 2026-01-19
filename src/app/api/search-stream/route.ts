@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
-import { searchUsers, enrichUserData, detectSpokenLanguage } from '@/lib/github'
+import { searchUsers, enrichUserData, detectSpokenLanguage, getUser } from '@/lib/github'
 import { enrichWithSOData } from '@/lib/stackoverflow'
-import { enrichWithLinkedIn } from '@/lib/linkedin'
+import { enrichWithLinkedIn, searchLinkedInWithFilters, findGitHubFromLinkedIn } from '@/lib/linkedin'
 import { calculateScore } from '@/lib/scoring'
 import { supabase } from '@/lib/supabase'
 import type { Candidate, SearchFilters } from '@/types/candidate'
@@ -36,6 +36,161 @@ export async function POST(request: NextRequest) {
     try {
       send('progress', { stage: 'init', message: 'Starting search...' })
 
+      const maxResults = filters.maxResults || 10
+
+      // LinkedIn-first approach when strict language filter is enabled
+      if (filters.strictLanguageFilter && filters.enableLinkedIn && filters.spokenLanguage) {
+        send('progress', {
+          stage: 'linkedin',
+          message: `Searching LinkedIn for ${filters.spokenLanguage}-speaking ${filters.techSkills?.[0] || ''} developers...`
+        })
+
+        const linkedInResults = await searchLinkedInWithFilters(
+          {
+            techSkills: filters.techSkills,
+            spokenLanguage: filters.spokenLanguage,
+            location: filters.location,
+            maxResults: Math.min(maxResults * 2, 30), // Fetch more to account for GitHub matching
+          },
+          (msg) => send('progress', { stage: 'linkedin', message: msg })
+        )
+
+        if (linkedInResults.error) {
+          send('progress', {
+            stage: 'linkedin',
+            message: `LinkedIn search issue: ${linkedInResults.error}. Falling back to GitHub...`
+          })
+        } else if (linkedInResults.profiles.length > 0) {
+          send('progress', {
+            stage: 'linkedin',
+            message: `Found ${linkedInResults.profiles.length} LinkedIn profiles, finding GitHub accounts...`,
+            total: linkedInResults.profiles.length,
+            current: 0
+          })
+
+          const candidates: Candidate[] = []
+
+          for (let i = 0; i < linkedInResults.profiles.length; i++) {
+            if (candidates.length >= maxResults) break
+
+            const liProfile = linkedInResults.profiles[i]
+
+            send('progress', {
+              stage: 'github',
+              message: `Finding GitHub for ${liProfile.name} (${i + 1}/${linkedInResults.profiles.length})...`,
+              total: linkedInResults.profiles.length,
+              current: i + 1
+            })
+
+            // Try to find GitHub username
+            const githubUsername = await findGitHubFromLinkedIn(
+              liProfile,
+              (msg) => send('progress', { stage: 'github', message: msg })
+            )
+
+            if (!githubUsername) {
+              send('progress', {
+                stage: 'github',
+                message: `No GitHub found for ${liProfile.name}, skipping...`
+              })
+              continue
+            }
+
+            try {
+              const enriched = await enrichUserData(githubUsername)
+
+              // Verify tech skills match
+              if (filters.techSkills && filters.techSkills.length > 0) {
+                const hasSkill = filters.techSkills.some(skill =>
+                  enriched.techSkills.some(s => s.toLowerCase() === skill.toLowerCase()) ||
+                  liProfile.skills.some(s => s.toLowerCase().includes(skill.toLowerCase()))
+                )
+                if (!hasSkill) continue
+              }
+
+              const lastActivity = enriched.repos.length > 0
+                ? enriched.repos[0].pushed_at
+                : enriched.user.updated_at
+
+              // Merge skills from LinkedIn
+              const allTechSkills = [...enriched.techSkills]
+              for (const skill of liProfile.skills) {
+                if (!allTechSkills.some(s => s.toLowerCase() === skill.toLowerCase())) {
+                  allTechSkills.push(skill)
+                }
+              }
+
+              const candidateData: Partial<Candidate> = {
+                github_username: enriched.user.login,
+                github_id: enriched.user.id,
+                name: enriched.user.name || liProfile.name,
+                bio: enriched.user.bio,
+                location: enriched.user.location || liProfile.location,
+                company: enriched.user.company,
+                email: enriched.user.email,
+                blog: enriched.user.blog,
+                twitter_username: enriched.user.twitter_username,
+                avatar_url: enriched.user.avatar_url,
+                public_repos: enriched.user.public_repos,
+                followers: enriched.user.followers,
+                following: enriched.user.following,
+                total_stars: enriched.totalStars,
+                tech_skills: allTechSkills.slice(0, 15),
+                detected_spoken_language: filters.spokenLanguage, // From LinkedIn
+                last_activity_at: lastActivity,
+                stackoverflow_id: null,
+                stackoverflow_reputation: 0,
+                linkedin_url: liProfile.profileUrl,
+              }
+
+              const score = calculateScore(candidateData)
+
+              candidates.push({
+                id: '',
+                ...candidateData,
+                total_commits: 0,
+                score,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              } as Candidate)
+
+              send('candidate', {
+                candidate: candidates[candidates.length - 1],
+                found: candidates.length,
+                target: maxResults
+              })
+
+            } catch (err) {
+              console.error(`Error enriching ${githubUsername}:`, err)
+            }
+          }
+
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => b.score - a.score)
+
+            await supabase.from('search_history').insert({
+              filters,
+              result_count: candidates.length,
+            })
+
+            send('complete', {
+              candidates,
+              total: candidates.length,
+              query: `LinkedIn: ${filters.spokenLanguage} ${filters.techSkills?.join(' ')}`,
+            })
+
+            close()
+            return
+          }
+
+          send('progress', {
+            stage: 'github',
+            message: 'No GitHub matches found from LinkedIn, falling back to GitHub search...'
+          })
+        }
+      }
+
+      // Standard GitHub-first search (fallback or when LinkedIn not enabled)
       // Build GitHub search query
       const queryParts: string[] = ['type:user']
 
@@ -50,7 +205,6 @@ export async function POST(request: NextRequest) {
       }
 
       const query = queryParts.join(' ')
-      const maxResults = filters.maxResults || 10
 
       let fetchCount = Math.min(maxResults * 2, 100)
       if (filters.strictLanguageFilter && filters.spokenLanguage) {
@@ -132,12 +286,41 @@ export async function POST(request: NextRequest) {
           const enriched = await enrichUserData(user.login)
           const detectedLanguage = detectSpokenLanguage(enriched.user.bio, enriched.user.location, enriched.user.name)
 
-          const deferLanguageCheck = filters.strictLanguageFilter && filters.enableLinkedIn && !detectedLanguage
+          // Check if there's any hint this user might speak the target language
+          // Only defer to LinkedIn if there's at least SOME positive signal
+          const hasLanguageHint = (targetLang: string): boolean => {
+            const locationHints: Record<string, RegExp> = {
+              'Russian': /russia|ukraine|belarus|moscow|kyiv|kiev|minsk|st\.?\s*petersburg|novosibirsk/i,
+              'German': /germany|austria|switzerland|berlin|munich|vienna|zurich/i,
+              'Spanish': /spain|mexico|argentina|colombia|madrid|barcelona|buenos aires/i,
+              'French': /france|paris|lyon|montreal|quebec|brussels/i,
+              'Portuguese': /brazil|portugal|lisbon|são paulo|rio/i,
+              'Chinese': /china|beijing|shanghai|taiwan|hong kong|shenzhen/i,
+              'Japanese': /japan|tokyo|osaka|kyoto/i,
+            }
+            const pattern = locationHints[targetLang]
+            if (!pattern) return false
+
+            const location = enriched.user.location || ''
+            const bio = enriched.user.bio || ''
+            return pattern.test(location) || pattern.test(bio)
+          }
+
+          // Only defer to LinkedIn if there's a location/bio hint for the target language
+          const deferLanguageCheck = filters.strictLanguageFilter &&
+            filters.enableLinkedIn &&
+            !detectedLanguage &&
+            filters.spokenLanguage &&
+            hasLanguageHint(filters.spokenLanguage)
 
           if (filters.spokenLanguage && !deferLanguageCheck) {
             if (filters.strictLanguageFilter) {
-              if (detectedLanguage !== filters.spokenLanguage) continue
+              // Strict mode: must have detected language match
+              if (detectedLanguage !== filters.spokenLanguage) {
+                continue
+              }
             } else {
+              // Non-strict: skip only if we detected a DIFFERENT language
               if (detectedLanguage && detectedLanguage !== filters.spokenLanguage) continue
             }
           }
