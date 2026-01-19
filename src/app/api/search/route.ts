@@ -27,15 +27,59 @@ export async function POST(request: NextRequest) {
     const query = queryParts.join(' ')
     const maxResults = filters.maxResults || 10
 
+    // When using strict language filter, we need to fetch more users to find matches
+    // Also add location-based queries for better language targeting
+    let fetchCount = Math.min(maxResults * 2, 100)
+    if (filters.strictLanguageFilter && filters.spokenLanguage) {
+      fetchCount = 100 // Fetch max when strict filtering
+    }
+
     // Search GitHub - fetch more than needed to account for filtering
-    const searchResult = await searchUsers(query, 1, Math.min(maxResults * 2, 100))
+    const searchResult = await searchUsers(query, 1, fetchCount)
+
+    // If strict language filter and we're looking for specific languages,
+    // also search with location hints
+    const additionalResults: typeof searchResult.items = []
+    if (filters.strictLanguageFilter && filters.spokenLanguage && !filters.location) {
+      const locationHints: Record<string, string[]> = {
+        'Russian': ['Russia', 'Ukraine', 'Belarus', 'Moscow', 'Saint Petersburg', 'Kyiv'],
+        'German': ['Germany', 'Austria', 'Switzerland', 'Berlin', 'Munich'],
+        'Spanish': ['Spain', 'Mexico', 'Argentina', 'Madrid', 'Barcelona'],
+        'French': ['France', 'Paris', 'Lyon', 'Montreal'],
+        'Portuguese': ['Brazil', 'Portugal', 'São Paulo', 'Lisbon'],
+        'Chinese': ['China', 'Beijing', 'Shanghai', 'Taiwan'],
+        'Japanese': ['Japan', 'Tokyo', 'Osaka'],
+      }
+
+      const locations = locationHints[filters.spokenLanguage]
+      if (locations) {
+        // Search with location hints (just the first 2 to avoid too many API calls)
+        for (const loc of locations.slice(0, 2)) {
+          try {
+            const locQuery = `${query} location:"${loc}"`
+            const locResult = await searchUsers(locQuery, 1, 30)
+            additionalResults.push(...locResult.items)
+          } catch (e) {
+            console.warn(`Location search failed for ${loc}:`, e)
+          }
+        }
+      }
+    }
+
+    // Combine and deduplicate results
+    const allUsers = [...searchResult.items]
+    for (const user of additionalResults) {
+      if (!allUsers.some(u => u.login === user.login)) {
+        allUsers.push(user)
+      }
+    }
 
     // Enrich each user with detailed data
     const candidates: Candidate[] = []
 
-    console.log(`GitHub search returned ${searchResult.items.length} users for query: ${query}`)
+    console.log(`GitHub search returned ${allUsers.length} users for query: ${query}`)
 
-    for (const user of searchResult.items) {
+    for (const user of allUsers) {
       // Stop if we have enough candidates
       if (candidates.length >= maxResults) break
       try {
@@ -44,8 +88,11 @@ export async function POST(request: NextRequest) {
 
         console.log(`User ${user.login}: name="${enriched.user.name}", location="${enriched.user.location}", bio="${enriched.user.bio?.substring(0, 50)}...", detected=${detectedLanguage}`)
 
-        // Filter by spoken language if specified
-        if (filters.spokenLanguage) {
+        // For strict language filter with LinkedIn enabled, we defer the check until after LinkedIn enrichment
+        const deferLanguageCheck = filters.strictLanguageFilter && filters.enableLinkedIn && !detectedLanguage
+
+        // Filter by spoken language if specified (unless deferring to LinkedIn)
+        if (filters.spokenLanguage && !deferLanguageCheck) {
           if (filters.strictLanguageFilter) {
             // Strict mode: only include users where we detected the exact language match
             if (detectedLanguage !== filters.spokenLanguage) {
@@ -113,6 +160,18 @@ export async function POST(request: NextRequest) {
           } catch (liError) {
             console.warn(`LinkedIn enrichment failed for ${user.login}:`, liError)
           }
+        }
+
+        // Deferred language check - now using LinkedIn data if available
+        if (deferLanguageCheck && filters.spokenLanguage) {
+          const linkedInHasLanguage = linkedInData?.linkedinLanguages?.some(
+            lang => lang.toLowerCase().includes(filters.spokenLanguage!.toLowerCase())
+          )
+          if (!linkedInHasLanguage) {
+            console.log(`  Skipping (strict+LinkedIn): no ${filters.spokenLanguage} in LinkedIn languages:`, linkedInData?.linkedinLanguages)
+            continue
+          }
+          console.log(`  Matched via LinkedIn languages: ${linkedInData?.linkedinLanguages}`)
         }
 
         // Merge tech skills from GitHub, SO, and LinkedIn
