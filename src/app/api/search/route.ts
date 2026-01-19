@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
               enriched.user.company
             )
             // If LinkedIn found languages, update detected language
-            if (linkedInData?.linkedinLanguages?.length > 0) {
+            if (linkedInData?.linkedinLanguages && linkedInData.linkedinLanguages.length > 0) {
               // LinkedIn languages are more reliable
               console.log(`  LinkedIn languages for ${user.login}:`, linkedInData.linkedinLanguages)
             }
